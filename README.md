@@ -4,6 +4,22 @@ Echo is a premium, cross-platform personal AI assistant that snapped directly to
 
 ---
 
+## Recent Updates (July 21, 2026)
+
+### 🚀 Authentication & User Management
+* **Auth Screen**: Added user registration and login interface (`src/components/AuthScreen.jsx`).
+* **Session Validation**: Integrated backend-secured JWT profile loading, session tracking, and automatic token expiry handling.
+
+### ⚙️ Custom AI Provider Onboarding
+* **Custom Endpoints**: Added `src/components/AddModelScreen.jsx` for onboarding custom AI models (API Key, Base URL, Temperature, Max Tokens).
+* **Dynamic Welcome Card**: Updated the Chat interface to prompt the user with `"Please add or select a model to continue."` if no models are active or configured.
+
+### 🖥️ Desktop UI & Stability Fixes
+* **Responsive Window Sizing**: Dynamic window resizing during login/onboarding steps to match the screen UI requirements.
+* **OxC Parse Error Fix**: Restored a missing `useEffect` hook block wrapper in `SettingsView.jsx` that was causing Vite parsing crashes.
+
+---
+
 ## Key Features
 
 ### 1. Echo Desktop Island (Dynamic snap)

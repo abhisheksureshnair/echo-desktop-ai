@@ -18,18 +18,19 @@ const SETTINGS_PATH = path.join(app.getPath('userData'), 'settings.json');
 function getSettings() {
   try {
     if (fs.existsSync(SETTINGS_PATH)) {
-      return JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
+      if (parsed.isAuthenticated === undefined) {
+        parsed.isAuthenticated = false;
+      }
+      return parsed;
     }
   } catch (e) {
     console.error('Failed to read settings:', e);
   }
   return {
-    models: [
-      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', provider: 'google' },
-      { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
-      { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'anthropic' }
-    ],
-    activeModelId: 'gemini-3.5-flash',
+    isAuthenticated: false,
+    models: [],
+    activeModelId: null,
     screenMode: 'single', // 'single' | 'multi'
     singleScreenDisplayId: null, // null = primary display
     multiScreenConfigs: {} // displayId -> { enabled: boolean, modelId: string }
@@ -312,17 +313,32 @@ function createWindowForDisplay(display, modelId) {
     return activeWindows.get(displayIdStr);
   }
 
-  const { x: sx, y: sy, width: sw } = display.workArea;
+  const { x: sx, y: sy, width: sw, height: sh } = display.workArea;
+  const settings = getSettings();
+  const isAuthenticated = settings.isAuthenticated;
+
+  let width = 380;
+  let height = 56;
+  let x = sx + Math.round((sw - width) / 2);
+  let y = sy + 16;
+  let resizable = false;
+
+  if (isAuthenticated === false) {
+    width = 400;
+    height = 580;
+    x = sx + Math.round((sw - width) / 2);
+    y = sy + Math.round((sh - height) / 2);
+  }
 
   const win = new BrowserWindow({
-    width: 380,
-    height: 56,
-    x: sx + Math.round((sw - 380) / 2),
-    y: sy + 16,
+    width,
+    height,
+    x,
+    y,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    resizable: false,
+    resizable,
     hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -451,6 +467,13 @@ ipcMain.on('resize-window', (event, { width, height, position }) => {
     x = sx + sw - w - 20;
     y = sy + 20;
     resizable = true;
+    win.setAlwaysOnTop(true, 'floating');
+  } else if (position === 'auth') {
+    w = width || 400;
+    h = height || 580;
+    x = sx + Math.round((sw - w) / 2);
+    y = sy + Math.round((sh - h) / 2);
+    resizable = false;
     win.setAlwaysOnTop(true, 'floating');
   } else {
     w = width || 380;

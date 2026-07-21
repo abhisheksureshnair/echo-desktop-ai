@@ -1,30 +1,17 @@
-import http from 'node:http';
-import { config } from './config/env.js';
-import { route } from './routes/index.js';
-import { sendJson } from './utils/http.js';
+import dotenv from "dotenv";
+import app from "./app.js";
+import { createServer } from "http";
+import connectDB from "./config/db.js";
 
-const server = http.createServer(async (request, response) => {
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+dotenv.config();
 
-  if (request.method === 'OPTIONS') {
-    response.writeHead(204);
-    response.end();
-    return;
-  }
+const PORT = process.env.PORT || 8080;
 
-  await route(request, response);
+connectDB();
+
+const httpServer = createServer(app);
+
+// Start server
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
-
-server.listen(config.port, config.host, () => {
-  console.log(`Echo backend listening at http://${config.host}:${config.port} (${config.nodeEnv})`);
-});
-
-server.on('error', (error) => {
-  console.error('Unable to start backend:', error.message);
-  process.exitCode = 1;
-});
-
-process.on('SIGTERM', () => server.close());
-process.on('SIGINT', () => server.close());

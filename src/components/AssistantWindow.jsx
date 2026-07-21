@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TopHeader from './TopHeader';
 import WelcomeSection from './WelcomeSection';
 import ChatArea from './ChatArea';
@@ -25,6 +25,9 @@ export default function AssistantWindow({
   detectedBrowser = null,
   isBrowserSidebar = false,
   onResizeRequest,
+  onLogout,
+  isGuest,
+  settings,
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(initialVoiceMode);
@@ -33,15 +36,76 @@ export default function AssistantWindow({
   const [status, setStatus] = useState('Online');
   const [showActions, setShowActions] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [localSettings, setLocalSettings] = useState(settings);
 
-  const [messages, setMessages] = useState([{
-    id: 'welcome',
-    sender: 'assistant',
-    text: isBrowserSidebar
+  const [messages, setMessages] = useState(() => {
+    const welcomeText = isBrowserSidebar
       ? `Hi! I'm your Echo co-pilot. I can summarize this page, explain content, translate text, help you write, or answer any question about what you're reading.`
-      : "Hello! I'm Echo. Ask me anything, or tap the arrow above to browse quick actions.",
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  }]);
+      : "Hello! I'm Echo. Ask me anything, or tap the arrow above to browse quick actions.";
+    return [{
+      id: 'welcome',
+      sender: 'assistant',
+      text: welcomeText,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }];
+  });
+
+  // Sync with settings prop
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
+
+  // Sync settings when SettingsView is closed
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      if (window.electronAPI?.getSavedSettings) {
+        window.electronAPI.getSavedSettings().then(saved => {
+          if (saved) setLocalSettings(saved);
+        });
+      } else {
+        const local = localStorage.getItem('echo-settings');
+        if (local) setLocalSettings(JSON.parse(local));
+      }
+    }
+  }, [isSettingsOpen]);
+
+  // Listen for broadcasted settings updates
+  useEffect(() => {
+    if (!window.electronAPI?.onSettingsUpdated) return;
+    const handleUpdated = (updated) => setLocalSettings(updated);
+    window.electronAPI.onSettingsUpdated(handleUpdated);
+    return () => window.electronAPI?.offSettingsUpdated?.();
+  }, []);
+
+  // Update welcome message dynamically based on whether a model is added and active/selected
+  useEffect(() => {
+    const hasModel = localSettings?.models && localSettings.models.length > 0;
+    const activeModelId = localSettings?.activeModelId;
+    const isModelSelected = !!activeModelId && localSettings.models.some(m => m.id === activeModelId);
+
+    const welcomeText = (!hasModel || !isModelSelected)
+      ? "Please add or select a model to continue."
+      : (isBrowserSidebar
+          ? `Hi! I'm your Echo co-pilot. I can summarize this page, explain content, translate text, help you write, or answer any question about what you're reading.`
+          : "Hello! I'm Echo. Ask me anything, or tap the arrow above to browse quick actions.");
+
+    setMessages(prev => {
+      const hasWelcome = prev.some(m => m.id === 'welcome');
+      if (hasWelcome) {
+        return prev.map(m => m.id === 'welcome' ? { ...m, text: welcomeText } : m);
+      } else {
+        return [
+          {
+            id: 'welcome',
+            sender: 'assistant',
+            text: welcomeText,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+          ...prev
+        ];
+      }
+    });
+  }, [localSettings, isBrowserSidebar]);
 
   const browserColor = BROWSER_COLORS[detectedBrowser] || '#5B8CFF';
 
@@ -179,7 +243,7 @@ export default function AssistantWindow({
       />
       <div className="glass-panel" style={floatStyles.windowContainer}>
         {isSettingsOpen ? (
-          <SettingsView onClose={() => setIsSettingsOpen(false)} />
+          <SettingsView onClose={() => setIsSettingsOpen(false)} onLogout={onLogout} />
         ) : (
           <>
             {isVoiceOpen && (
@@ -194,6 +258,8 @@ export default function AssistantWindow({
               onToggleSearch={() => handleSendMessage("Search workspace files…")}
               onToggleSettings={() => setIsSettingsOpen(true)}
               onMinimize={onMinimize}
+              isGuest={isGuest}
+              onLoginClick={onLogout}
             />
             <div style={{
               ...floatStyles.collapsibleActions,

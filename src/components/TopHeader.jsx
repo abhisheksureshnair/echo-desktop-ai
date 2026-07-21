@@ -1,7 +1,7 @@
 import React from 'react';
-import { Settings, Search, Minimize2, Sparkles, Sidebar } from 'lucide-react';
+import { Settings, Search, Minimize2, Sparkles, Sidebar, LogIn } from 'lucide-react';
 
-export default function TopHeader({ status, onToggleSidebar, onToggleSearch, onToggleSettings, onMinimize }) {
+export default function TopHeader({ status, onToggleSidebar, onToggleSearch, onToggleSettings, onMinimize, isGuest, onLoginClick }) {
   return (
     <div style={styles.headerContainer}>
       {/* Branding Left */}
@@ -24,6 +24,26 @@ export default function TopHeader({ status, onToggleSidebar, onToggleSearch, onT
 
       {/* Action Controls Right */}
       <div style={styles.rightSection}>
+        {isGuest && (
+          <button 
+            style={styles.loginBtn} 
+            onClick={onLoginClick} 
+            title="Log In to Echo"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(91, 140, 255, 0.15)';
+              e.currentTarget.style.borderColor = '#5B8CFF';
+              e.currentTarget.style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(91, 140, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(91, 140, 255, 0.3)';
+              e.currentTarget.style.color = '#5B8CFF';
+            }}
+          >
+            <LogIn size={13} style={{ marginRight: 5 }} />
+            <span style={styles.loginBtnText}>Log In</span>
+          </button>
+        )}
         <button style={styles.iconBtn} onClick={onToggleSidebar} title="Toggle Workspace Panel">
           <Sidebar size={15} />
         </button>
@@ -134,5 +154,23 @@ const styles = {
       backgroundColor: 'rgba(239, 68, 68, 0.08)',
       color: '#EF4444',
     }
+  },
+  loginBtn: {
+    padding: '4px 10px',
+    borderRadius: '6px',
+    border: '1px solid rgba(91, 140, 255, 0.3)',
+    backgroundColor: 'rgba(91, 140, 255, 0.05)',
+    color: '#5B8CFF',
+    cursor: 'pointer',
+    marginRight: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.15s ease',
+    WebkitAppRegion: 'no-drag',
+  },
+  loginBtnText: {
+    fontSize: '11px',
+    fontWeight: '600',
   }
 };
